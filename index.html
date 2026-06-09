@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>숨고 광고 카피 생성기</title>
+<style>
+  :root {
+    --bg: #f5f5f8;
+    --surface: #ffffff;
+    --surface2: #f0f0f4;
+    --border: #e0e0ea;
+    --border2: #d0d0e0;
+    --purple: #7c5cfc;
+    --purple-light: #5c3de0;
+    --purple-bg: #ede8ff;
+    --purple-dim: #f0ebff;
+    --green: #00a86b;
+    --green-bg: #e6f7f1;
+    --green-dim: #d0f0e4;
+    --text: #1a1a2e;
+    --text-muted: #5a5a7a;
+    --text-dim: #9090b0;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Pretendard','Apple SD Gothic Neo',-apple-system,sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
+  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 28px; display: flex; align-items: center; gap: 10px; }
+  .logo-mark { width: 30px; height: 30px; background: linear-gradient(135deg,var(--purple),#a07aff); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: #fff; }
+  header h1 { font-size: 14px; font-weight: 600; color: var(--text-muted); }
+  header h1 strong { color: var(--text); font-weight: 700; }
+  .tab-bar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 28px; display: flex; }
+  .tab { padding: 14px 22px; border: none; background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; border-bottom: 3px solid transparent; font-family: inherit; }
+  .tab.active { color: var(--purple); border-bottom-color: var(--purple); }
+  .tab.active.green-tab { color: var(--green); border-bottom-color: var(--green); }
+  .tab:hover:not(.active) { color: var(--text); }
+  .main { flex: 1; display: flex; padding: 20px 28px 28px; max-width: 1480px; width: 100%; margin: 0 auto; }
+  .chat-pane { flex: 0 0 340px; display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
+  .chat-header { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; background: var(--surface2); }
+  .chat-avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+  .chat-avatar.request { background: var(--purple-bg); color: var(--purple); }
+  .chat-avatar.gosu { background: var(--green-bg); color: var(--green); }
+  .chat-header-text { font-size: 13px; font-weight: 700; color: var(--text); }
+  .chat-header-sub { font-size: 11px; color: var(--text-dim); margin-top: 1px; }
+  .chip-section { border-bottom: 1px solid var(--border); padding: 10px 16px; display: none; }
+  .chip-section.visible { display: block; }
+  .chip-label-txt { font-size: 10px; font-weight: 600; color: var(--text-dim); letter-spacing: .3px; margin-bottom: 6px; }
+  .history-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .chip { padding: 3px 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 100px; font-size: 11px; font-weight: 500; color: var(--text-muted); cursor: pointer; transition: all .1s; }
+  .chip:hover { border-color: var(--purple); color: var(--purple); background: var(--purple-dim); }
+  .chip.green:hover { border-color: var(--green); color: var(--green); background: var(--green-dim); }
+  .chat-messages { flex: 1; overflow-y: auto; padding: 18px; display: flex; flex-direction: column; gap: 14px; min-height: 300px; max-height: 400px; }
+  .chat-messages::-webkit-scrollbar { width: 4px; }
+  .chat-messages::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+  .msg { display: flex; flex-direction: column; gap: 3px; max-width: 90%; }
+  .msg.bot { align-self: flex-start; }
+  .msg.user { align-self: flex-end; }
+  .msg-bubble { padding: 10px 13px; border-radius: 14px; font-size: 13px; line-height: 1.6; word-break: keep-all; }
+  .msg.bot .msg-bubble { background: var(--surface2); border: 1px solid var(--border); border-bottom-left-radius: 4px; color: var(--text); }
+  .msg.user .msg-bubble { background: var(--purple); border-bottom-right-radius: 4px; color: #fff; }
+  .msg.user.green .msg-bubble { background: var(--green); }
+  .msg-time { font-size: 10px; color: var(--text-dim); padding: 0 3px; }
+  .msg.user .msg-time { text-align: right; }
+  .chat-input-area { padding: 14px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; align-items: flex-end; background: var(--surface2); }
+  .input-wrap { display: flex; flex-direction: column; flex: 1; }
+  .chat-input { flex: 1; background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 9px 12px; color: var(--text); font-size: 13px; font-family: inherit; resize: none; outline: none; transition: border-color .15s; line-height: 1.5; max-height: 120px; }
+  .chat-input:focus { border-color: var(--purple); box-shadow: 0 0 0 2px var(--purple-dim); }
+  .chat-input.green:focus { border-color: var(--green); box-shadow: 0 0 0 2px var(--green-dim); }
+  .chat-input::placeholder { color: var(--text-dim); }
+  .send-btn { width: 36px; height: 36px; border-radius: var(--radius-sm); border: none; background: var(--purple); color: #fff; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity .15s; flex-shrink: 0; }
+  .send-btn:hover { opacity: .85; }
+  .send-btn:disabled { opacity: .35; cursor: not-allowed; }
+  .send-btn.green { background: var(--green); }
+  .result-pane { flex: 1; margin-left: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .result-header { display: flex; align-items: center; justify-content: space-between; }
+  .result-title { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+  .result-title strong { color: var(--text); font-weight: 700; }
+  .result-actions { display: flex; gap: 8px; }
+  .btn-copy, .btn-clear { padding: 7px 14px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; font-family: inherit; border: 1px solid var(--border2); }
+  .btn-copy { background: var(--purple-dim); color: var(--purple-light); border-color: #c8b8ff; }
+  .btn-copy:hover { background: var(--purple); color: #fff; border-color: var(--purple); }
+  .btn-copy.green { background: var(--green-dim); color: var(--green); border-color: #80d8b8; }
+  .btn-copy.green:hover { background: var(--green); color: #fff; border-color: var(--green); }
+  .btn-clear { background: var(--surface); color: var(--text-muted); }
+  .btn-clear:hover { background: var(--surface2); color: var(--text); }
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: auto; box-shadow: 0 1px 4px rgba(0,0,0,.04); flex: 1; }
+  .result-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .result-table thead th { padding: 11px 13px; text-align: left; background: var(--surface2); color: var(--text-dim); font-weight: 700; font-size: 11px; letter-spacing: .3px; border-bottom: 1px solid var(--border); white-space: nowrap; position: sticky; top: 0; z-index: 1; }
+  .result-table tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+  .result-table tbody tr:last-child { border-bottom: none; }
+  .result-table tbody tr:hover { background: #fafafa; }
+  .result-table tbody td { padding: 11px 13px; color: var(--text); vertical-align: top; line-height: 1.55; }
+  .tag { display: inline-block; padding: 2px 7px; border-radius: 100px; font-size: 10px; font-weight: 600; }
+  .tag-service { background: #eff2ff; color: #4a70ff; }
+  .tag-needs   { background: #f3eeff; color: #7c4dff; }
+  .tag-review  { background: #e8f7f0; color: #00916e; }
+  .tag-season  { background: #fff3ea; color: #e05a10; }
+  .tag-custom  { background: #fffbe6; color: #b08000; }
+  .tag-job     { background: #e8f4ff; color: #1a7cc0; }
+  .tag-profit  { background: #f5e8ff; color: #8b20c0; }
+  .copy-main { font-weight: 700; color: var(--text); }
+  .copy-sub  { color: var(--text-muted); }
+  .copy-cta  { color: var(--purple-light); font-weight: 600; font-size: 11px; }
+  .copy-cta.green { color: var(--green); }
+  .copy-intent { color: var(--text-dim); font-size: 11px; line-height: 1.5; max-width: 180px; }
+  .skeleton { height: 12px; background: linear-gradient(90deg,var(--surface2) 25%,var(--border) 50%,var(--surface2) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 6px; }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+  .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 70px 40px; color: var(--text-dim); text-align: center; gap: 10px; }
+  .empty-icon { font-size: 32px; opacity: .4; }
+  .empty-text { font-size: 14px; font-weight: 600; color: var(--text-muted); }
+  .empty-sub { font-size: 12px; line-height: 1.7; }
+  .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(10px); background: var(--text); color: #fff; padding: 10px 20px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; opacity: 0; transition: all .22s; pointer-events: none; z-index: 100; white-space: nowrap; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .tab-content { display: none; }
+  .tab-content.active { display: flex; flex-direction: column; flex: 1; }
+  .typing-indicator { display: flex; gap: 4px; align-items: center; padding: 2px 0; }
+  .typing-indicator span { width: 5px; height: 5px; background: var(--text-dim); border-radius: 50%; animation: bounce 1.2s infinite; }
+  .typing-indicator span:nth-child(2) { animation-delay: .2s; }
+  .typing-indicator span:nth-child(3) { animation-delay: .4s; }
+  @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-5px)} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark">숨</div>
+  <h1><strong>광고 카피 생성기</strong> · Soomgo Ad Copy Generator</h1>
+</header>
+
+<div class="tab-bar">
+  <button class="tab active" id="tab-request" onclick="switchTab('request')">📋 고객 모집용 (요청 광고)</button>
+  <button class="tab" id="tab-gosu" onclick="switchTab('gosu')">🛠️ 전문가 모집용 (고수 광고)</button>
+</div>
+
+<!-- REQUEST TAB -->
+<div class="tab-content active" id="panel-request">
+  <div class="main">
+    <div class="chat-pane">
+      <div class="chat-header">
+        <div class="chat-avatar request">요</div>
+        <div>
+          <div class="chat-header-text">고객 모집용 카피 생성</div>
+          <div class="chat-header-sub">요청서 작성 유도 · CPR 최적화</div>
+        </div>
+      </div>
+      <div class="chip-section" id="req-chip-section">
+        <div class="chip-label-txt">최근 검색</div>
+        <div class="history-chips" id="req-chips"></div>
+      </div>
+      <div class="chat-messages" id="req-messages">
+        <div class="msg bot">
+          <div class="msg-bubble">안녕하세요! 고객 모집용 광고 카피를 생성해드릴게요.<br><br>서비스명을 입력해주세요.<br>여러 서비스는 한 줄에 하나씩 입력하면 각각 5개씩 생성됩니다.</div>
+          <div class="msg-time">지금</div>
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <div class="input-wrap">
+          <textarea class="chat-input" id="req-input" placeholder="서비스명 입력 (여러 개는 줄바꿈으로 구분)" rows="2"
+            onkeydown="handleKey(event,'request')" oninput="autoResize(this)"></textarea>
+        </div>
+        <button class="send-btn" id="req-send" onclick="submitService('request')">↑</button>
+      </div>
+    </div>
+    <div class="result-pane">
+      <div class="result-header">
+        <div class="result-title" id="req-result-title">결과가 여기에 표시됩니다</div>
+        <div class="result-actions">
+          <button class="btn-copy" id="req-copy-btn" onclick="copyTable('request')" style="display:none">📋 표 복사 (스프레드시트용)</button>
+          <button class="btn-clear" id="req-clear-btn" onclick="clearResults('request')" style="display:none">초기화</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <div class="empty-state" id="req-empty">
+          <div class="empty-icon">📝</div>
+          <div class="empty-text">서비스명을 입력해 카피를 생성하세요</div>
+          <div class="empty-sub">여러 서비스를 줄바꿈으로 구분해서 입력하면<br>각각 5개씩 생성되어 표에 이어붙여집니다</div>
+        </div>
+        <table class="result-table" id="req-table" style="display:none">
+          <thead>
+            <tr>
+              <th>기획연월</th><th>광고대상</th><th>서비스명</th>
+              <th>소구점</th><th>메인카피</th><th>서브카피</th>
+              <th>CTA문구</th><th>기획의도</th>
+            </tr>
+          </thead>
+          <tbody id="req-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GOSU TAB -->
+<div class="tab-content" id="panel-gosu">
+  <div class="main">
+    <div class="chat-pane">
+      <div class="chat-header">
+        <div class="chat-avatar gosu">고</div>
+        <div>
+          <div class="chat-header-text">전문가 모집용 카피 생성</div>
+          <div class="chat-header-sub">고수 가입 유도 · 캐시 결제 전환</div>
+        </div>
+      </div>
+      <div class="chip-section" id="gosu-chip-section">
+        <div class="chip-label-txt">최근 검색</div>
+        <div class="history-chips" id="gosu-chips"></div>
+      </div>
+      <div class="chat-messages" id="gosu-messages">
+        <div class="msg bot">
+          <div class="msg-bubble">전문가 모집용 광고 카피를 생성해드릴게요.<br><br>서비스명을 입력해주세요.<br>여러 서비스는 한 줄에 하나씩 입력하면 각각 5개씩 생성됩니다.</div>
+          <div class="msg-time">지금</div>
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <div class="input-wrap">
+          <textarea class="chat-input green" id="gosu-input" placeholder="서비스명 입력 (여러 개는 줄바꿈으로 구분)" rows="2"
+            onkeydown="handleKey(event,'gosu')" oninput="autoResize(this)"></textarea>
+        </div>
+        <button class="send-btn green" id="gosu-send" onclick="submitService('gosu')">↑</button>
+      </div>
+    </div>
+    <div class="result-pane">
+      <div class="result-header">
+        <div class="result-title" id="gosu-result-title">결과가 여기에 표시됩니다</div>
+        <div class="result-actions">
+          <button class="btn-copy green" id="gosu-copy-btn" onclick="copyTable('gosu')" style="display:none">📋 표 복사 (스프레드시트용)</button>
+          <button class="btn-clear" id="gosu-clear-btn" onclick="clearResults('gosu')" style="display:none">초기화</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <div class="empty-state" id="gosu-empty">
+          <div class="empty-icon">🛠️</div>
+          <div class="empty-text">서비스명을 입력해 카피를 생성하세요</div>
+          <div class="empty-sub">여러 서비스를 줄바꿈으로 구분해서 입력하면<br>각각 5개씩 생성되어 표에 이어붙여집니다</div>
+        </div>
+        <table class="result-table" id="gosu-table" style="display:none">
+          <thead>
+            <tr>
+              <th>기획연월</th><th>광고대상</th><th>서비스명</th>
+              <th>소구점</th><th>메인카피</th><th>서브카피</th>
+              <th>CTA문구</th><th>기획의도</th>
+            </tr>
+          </thead>
+          <tbody id="gosu-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const state = {
+  request: { history: [], totalRows: 0 },
+  gosu:    { history: [], totalRows: 0 }
+};
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active','green-tab'));
+  document.querySelectorAll('.tab-content').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  if (tab==='gosu') document.getElementById('tab-gosu').classList.add('green-tab');
+  document.getElementById('panel-'+tab).classList.add('active');
+}
+
+function handleKey(e, tab) {
+  if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); submitService(tab); }
+}
+function autoResize(el) {
+  el.style.height='auto';
+  el.style.height=Math.min(el.scrollHeight,130)+'px';
+}
+function getYYMM() {
+  const d=new Date();
+  return String(d.getFullYear()).slice(2)+String(d.getMonth()+1).padStart(2,'0');
+}
+function nowTime() {
+  return new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+}
+
+function addMsg(tab, role, text) {
+  const id = tab==='request'?'req':'gosu';
+  const isGreen = tab==='gosu';
+  const wrap = document.getElementById(id+'-messages');
+  const div = document.createElement('div');
+  div.className='msg '+role+(role==='user'&&isGreen?' green':'');
+  div.innerHTML='<div class="msg-bubble">'+text.replace(/\n/g,'<br>')+'</div><div class="msg-time">'+nowTime()+'</div>';
+  wrap.appendChild(div);
+  wrap.scrollTop=wrap.scrollHeight;
+}
+
+function addTyping(tab) {
+  const id=tab==='request'?'req':'gosu';
+  const wrap=document.getElementById(id+'-messages');
+  const div=document.createElement('div');
+  div.className='msg bot'; div.id=id+'-typing';
+  div.innerHTML='<div class="msg-bubble"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
+  wrap.appendChild(div); wrap.scrollTop=wrap.scrollHeight;
+}
+function removeTyping(tab) {
+  const el=document.getElementById((tab==='request'?'req':'gosu')+'-typing');
+  if(el) el.remove();
+}
+
+function updateChips(tab, services) {
+  const id=tab==='request'?'req':'gosu';
+  const isGreen=tab==='gosu';
+  const s=state[tab];
+  services.forEach(sv=>{ if(!s.history.includes(sv)) s.history.push(sv); });
+  const section=document.getElementById(id+'-chip-section');
+  const chips=document.getElementById(id+'-chips');
+  if(!s.history.length){ section.classList.remove('visible'); return; }
+  section.classList.add('visible');
+  chips.innerHTML=[...s.history].reverse().slice(0,8).map(sv=>
+    '<div class="chip'+(isGreen?' green':'')+'" onclick="fillInput(\''+tab+'\','+JSON.stringify(sv)+')">'+sv+'</div>'
+  ).join('');
+}
+function fillInput(tab,text) {
+  const el=document.getElementById(tab==='request'?'req-input':'gosu-input');
+  el.value=text; el.focus(); autoResize(el);
+}
+
+// ── SUBMIT ──────────────────────────────────────────────
+async function submitService(tab) {
+  const id=tab==='request'?'req':'gosu';
+  const inputEl=document.getElementById(id+'-input');
+  const raw=inputEl.value.trim();
+  if(!raw) return;
+
+  const services=raw.split('\n').map(s=>s.trim()).filter(Boolean);
+  if(!services.length) return;
+
+  const sendBtn=document.getElementById(id+'-send');
+  sendBtn.disabled=true;
+  inputEl.value=''; inputEl.style.height='auto';
+
+  addMsg(tab,'user',services.join('\n'));
+  updateChips(tab,services);
+
+  // Show table and add skeletons
+  showTable(tab);
+  const skeletonIds=services.map(sv=>addSkeletonGroup(tab,sv));
+
+  const results=[];
+  for(let i=0;i<services.length;i++){
+    addTyping(tab);
+    try {
+      const rows=await generateCopy(tab,services[i]);
+      removeTyping(tab);
+      results.push({service:services[i],rows});
+      replaceSkeletonGroup(tab,skeletonIds[i],services[i],rows);
+    } catch(e) {
+      removeTyping(tab);
+      removeSkeletonGroup(skeletonIds[i]);
+      addMsg(tab,'bot',"'"+services[i]+"' 생성 중 오류: "+e.message);
+    }
+  }
+
+  if(results.length>0){
+    updateResultTitle(tab);
+    addMsg(tab,'bot',
+      results.length===services.length
+        ? services.map(s=>"'"+s+"'").join(', ')+' 카피 생성 완료! 표에서 확인하고 복사해 사용하세요.'
+        : results.length+'개 서비스 카피 생성 완료 ('+(services.length-results.length)+'개 실패)'
+    );
+  }
+  sendBtn.disabled=false;
+}
+
+// ── Skeleton ─────────────────────────────────────────────
+function showTable(tab) {
+  const id=tab==='request'?'req':'gosu';
+  document.getElementById(id+'-empty').style.display='none';
+  document.getElementById(id+'-table').style.display='table';
+}
+
+let skelCount=0;
+function addSkeletonGroup(tab,service) {
+  const id=tab==='request'?'req':'gosu';
+  const tbody=document.getElementById(id+'-tbody');
+  const gid='skel-'+(++skelCount);
+  for(let i=0;i<5;i++){
+    const tr=document.createElement('tr');
+    tr.dataset.group=gid;
+    tr.innerHTML=
+      '<td><div class="skeleton" style="width:40px"></div></td>'+
+      '<td><div class="skeleton" style="width:30px"></div></td>'+
+      '<td><div class="skeleton" style="width:80px"></div></td>'+
+      '<td><div class="skeleton" style="width:48px"></div></td>'+
+      '<td><div class="skeleton" style="width:90px"></div></td>'+
+      '<td><div class="skeleton" style="width:90px"></div></td>'+
+      '<td><div class="skeleton" style="width:64px"></div></td>'+
+      '<td><div class="skeleton" style="width:130px"></div></td>';
+    tbody.appendChild(tr);
+  }
+  return gid;
+}
+
+function removeSkeletonGroup(gid) {
+  document.querySelectorAll('[data-group="'+gid+'"]').forEach(el=>el.remove());
+}
+
+const tagMap={
+  service:['tag-service','서비스명'],
+  needs:  ['tag-needs',  '니즈형'],
+  review: ['tag-review', '후기형'],
+  season: ['tag-season', '시즌성'],
+  custom: ['tag-custom', '맞춤형'],
+  job:    ['tag-job',    '직업명'],
+  profit: ['tag-profit', '부수입'],
+};
+
+function replaceSkeletonGroup(tab,gid,service,rows) {
+  const id=tab==='request'?'req':'gosu';
+  const isGreen=tab==='gosu';
+  const yymm=getYYMM();
+  const adTarget=tab==='request'?'요청':'고수';
+  removeSkeletonGroup(gid);
+  const tbody=document.getElementById(id+'-tbody');
+  rows.forEach(r=>{
+    const [cls,label]=tagMap[r.appeal]||['tag-service',r.appeal];
+    const tr=document.createElement('tr');
+    const rowData=[yymm,adTarget,service,label,r.main,r.sub,r.cta,r.intent];
+    tr.dataset.row=JSON.stringify(rowData);
+    tr.innerHTML=
+      '<td>'+yymm+'</td>'+
+      '<td>'+adTarget+'</td>'+
+      '<td>'+service+'</td>'+
+      '<td><span class="tag '+cls+'">'+label+'</span></td>'+
+      '<td><span class="copy-main">'+r.main+'</span></td>'+
+      '<td><span class="copy-sub">'+r.sub+'</span></td>'+
+      '<td><span class="copy-cta'+(isGreen?' green':'')+'">'+r.cta+'</span></td>'+
+      '<td><span class="copy-intent">'+r.intent+'</span></td>';
+    tbody.appendChild(tr);
+    state[tab].totalRows++;
+  });
+}
+
+function updateResultTitle(tab) {
+  const id=tab==='request'?'req':'gosu';
+  const count=document.querySelectorAll('#'+id+'-tbody tr[data-row]').length;
+  document.getElementById(id+'-result-title').innerHTML='총 <strong>'+count+'</strong>개 카피';
+  document.getElementById(id+'-copy-btn').style.display='';
+  document.getElementById(id+'-clear-btn').style.display='';
+}
+
+// ── API ───────────────────────────────────────────────────
+async function generateCopy(tab,service) {
+  const isRequest=tab==='request';
+  const monthNum=parseInt(getYYMM().slice(2));
+
+  const systemPrompt=`당신은 숨고(Soomgo) 마케팅팀의 광고 카피라이터입니다.
+숨고는 서비스 전문가(고수)와 고객(요청자)을 연결하는 플랫폼입니다.
+
+[광고 목적]
+${isRequest
+  ?'고객 모집용(요청 광고): 숨고에서 요청서를 작성해 무료로 고수 견적을 받아보도록 유도. KPI: 요청서 작성 수(CPR 최적화)'
+  :'전문가 모집용(고수 광고): 해당 분야 전문가가 고수로 가입하도록 유도. KPI: 고수 가입 및 캐시 결제 전환'}
+
+[카피 규칙 - 반드시 준수]
+1. 메인카피: 띄어쓰기(공백)도 1글자로 계산해서 정확히 11글자. 예) "결혼식 사회자 찾기" = 10글자(X) → "결혼식 사회자 섭외" = 10글자(X) → "결혼식 사회자 구하기" = 12글자(X) → "전문 사회자 찾아보기" = 11글자(O)
+2. 서브카피: 띄어쓰기(공백)도 1글자로 계산해서 정확히 11글자.
+3. 5개 메인카피는 모두 달라야 함. 유사한 구조·단어·뜻의 반복 금지. 예) "코킹 전문가 모십니다"와 "코킹 전문가 모집합니다"는 사실상 동일 → 금지
+4. 5개 서브카피도 모두 달라야 함. 같은 단어·구절 재사용 금지
+5. 하나의 카피 세트 안에서 메인·서브·CTA 간 동일 핵심 단어 반복 금지
+6. 5개 각각 반드시 다른 소구점 유형
+7. 메인카피 또는 서브카피 중 하나에 반드시 서비스 관련 핵심 단어를 포함할 것
+
+[글자 수 계산 방법]
+- 공백도 1자: "비용 비교 해봐요" → 비(1)용(2) (3)비(4)교(5) (6)해(7)봐(8)요(9) = 9글자
+- 출력 전 각 카피의 글자를 한 자씩 세어 11자인지 반드시 확인할 것
+- 11자 예시: "원룸 이사 맡겨보세요", "집 정리 전문가 찾기", "전문 사회자 구하기"
+
+[소구점 유형]
+- service: 서비스명 자체를 직접 강조
+- needs: 불편함/상황에 공감하거나 필요성 제시 (요청 광고 전용: 고객의 니즈)
+- review: 후기, 이용 결과, 성과 중심
+- season: 현재 달(${monthNum}월) 관련 시즌 카피 (해당 없으면 custom으로 대체)
+- custom: 해당 서비스 고유의 맞춤형 카피${!isRequest?`
+- job: 구체적인 직업명 활용
+- profit: 부수입/추가수입 강조`:''}
+
+[유의사항]
+${isRequest
+  ?`CTA: "견적 받기", "신청하기", "비교하기", "문의하기" 계열`
+  :`CTA: "고수 등록하기", "고수로 활동하기", "무료 등록" 계열
+100% 수익 보장 표현 절대 금지
+인테리어/설치/수리 카테고리: '업자' 표현 금지`}
+
+${!isRequest?`
+[고수 광고 전용 - 관점 원칙]
+광고 타깃은 해당 분야 기술·경력을 보유한 전문가입니다.
+핵심 메시지: 숨고를 통해 고객을 만나고 활동 범위를 넓힐 수 있다.
+
+■ 절대 금지 관점 (예시로 확인할 것):
+- 고객 시선 카피 금지: "해충 문제 맡겨보세요"(X), "후기로 검증된 고수"(X) → 이건 고객 광고
+- 플랫폼 부족 암시 금지: "의뢰는 오는데 홍보가?"(X) → 숨고를 부정적으로 묘사
+- 5개 카피가 모두 "전문가 모집", "고수 모집", "모십니다" 식으로 수렴하는 것 금지
+
+■ 각 카피는 서로 다른 절에서 출발할 것. 아래 관점 중 5개를 각각 다르게 사용:
+- 고객 연결: 숨고에서 내 주변 고객과 바로 매칭
+- 수익/부수입: 기술로 새 수입 채널 확보 (단, 확정 표현 금지)
+- 전문가 정체성: 직업·자격·경력을 내세워 활동 독려
+- 편의성: 일감 관리·견적·소통이 앱 하나로 해결
+- 지역·시간 자유도: 내 지역, 원하는 시간에만 활동
+- 성장/확장: 기존 고객 외 새 고객 채널 추가
+- 진입 낮추기: 무료 가입·빠른 시작 강조
+- 전문가 공감: 고객 찾기 어려운 현실에 공감 후 해결책 제시
+
+■ 소구점별 해석 (고수 광고):
+- needs: 전문가가 겪는 고충(고객 부족·홍보 어려움)에 공감
+- review: 이미 활동 중인 고수의 성과·변화
+- profit: 부수입·추가 수익 채널로서의 숨고
+`:''}
+
+[카피 톤앤매너 - 반드시 준수]
+1. 반말 사용 절대 금지. "~해봐", "~이야", "~하자", "~돼" 등 종결어미 반말 금지
+2. 문장형 카피(~요, ~죠, ~세요)와 명사형 카피를 균형있게 사용할 것
+   - 명사형 카피 예시: "전문 사회자 섭외", "입주청소 비용 비교", "고수 무료 등록"
+   - 문장형 카피 예시: "시공 전에 견적 받으세요", "전문가에게 맡겨보세요"
+   - 5개 중 명사형 최소 2개 이상 포함
+3. 물음표/느낌표를 적절히 활용할 것
+   - 니즈형·후기형은 물음표(?) 또는 느낌표(!) 적극 사용
+   - 예시: "비둘기 퇴치 필요하세요?", "고수 모집 중!"
+   - 단, 물음표·느낌표는 글자 수에 포함하지 않음 (11자 카운트 제외)
+
+[출력 형식 - 매우 중요]
+반드시 JSON 배열만 출력하세요. 어떠한 설명, 주석, 마크다운도 붙이지 마세요.
+첫 글자는 반드시 "[" 이어야 합니다.
+
+[{"appeal":"service","main":"메인카피11자","sub":"서브카피11자","cta":"CTA문구","intent":"기획의도 1-2문장"},...]`;
+
+  const resp=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens:1800,
+      system:systemPrompt,
+      messages:[{role:'user',content:
+        '서비스명: '+service+'\n'+(isRequest?'고객 모집용(요청)':'전문가 모집용(고수)')+' 광고 카피 5개를 생성하세요. 반드시 JSON 배열만 출력하세요.'
+      }]
+    })
+  });
+
+  if(!resp.ok) throw new Error('API '+resp.status);
+  const data=await resp.json();
+  const raw=data.content[0].text;
+
+  // Robust JSON extraction: find the first '[' and last ']'
+  const start=raw.indexOf('[');
+  const end=raw.lastIndexOf(']');
+  if(start===-1||end===-1||end<=start) throw new Error('JSON 파싱 실패: 응답에 배열이 없습니다');
+  const jsonStr=raw.slice(start,end+1);
+
+  let parsed;
+  try { parsed=JSON.parse(jsonStr); }
+  catch(e) { throw new Error('JSON 파싱 실패: '+e.message); }
+
+  if(!Array.isArray(parsed)||parsed.length===0) throw new Error('결과 배열이 비어 있습니다');
+  return parsed;
+}
+
+// ── Copy ──────────────────────────────────────────────────
+function copyTable(tab) {
+  const id=tab==='request'?'req':'gosu';
+  const rows=[...document.querySelectorAll('#'+id+'-tbody tr[data-row]')];
+  if(!rows.length) return;
+  const header='기획연월\t광고대상\t서비스명\t소구점\t메인카피\t서브카피\tCTA문구\t기획의도';
+  const lines=rows.map(tr=>JSON.parse(tr.dataset.row).join('\t'));
+  const text=[header,...lines].join('\n');
+
+  // Try modern clipboard API first, fall back to execCommand
+  if(navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(()=>{
+      showToast('📋 클립보드 복사 완료! 스프레드시트에 붙여넣기 하세요.');
+    }).catch(()=>fallbackCopy(text));
+  } else {
+    fallbackCopy(text);
+  }
+}
+
+function fallbackCopy(text) {
+  const ta=document.createElement('textarea');
+  ta.value=text;
+  ta.style.cssText='position:fixed;left:-9999px;top:-9999px;opacity:0';
+  document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  try {
+    document.execCommand('copy');
+    showToast('📋 클립보드 복사 완료! 스프레드시트에 붙여넣기 하세요.');
+  } catch(e) {
+    showToast('⚠️ 복사 실패. 표를 직접 선택해 복사해주세요.');
+  }
+  document.body.removeChild(ta);
+}
+
+function clearResults(tab) {
+  const id=tab==='request'?'req':'gosu';
+  document.getElementById(id+'-tbody').innerHTML='';
+  document.getElementById(id+'-table').style.display='none';
+  document.getElementById(id+'-empty').style.display='flex';
+  document.getElementById(id+'-copy-btn').style.display='none';
+  document.getElementById(id+'-clear-btn').style.display='none';
+  document.getElementById(id+'-result-title').textContent='결과가 여기에 표시됩니다';
+  state[tab].totalRows=0;
+}
+
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+</script>
+</body>
+</html>
