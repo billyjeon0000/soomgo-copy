@@ -128,6 +128,16 @@
   <h1><strong>광고 카피 생성기</strong> · Soomgo Ad Copy Generator</h1>
 </header>
 
+<div id="apikey-bar" style="background:#fffbe6;border-bottom:1px solid #f0d060;padding:10px 28px;display:flex;align-items:center;gap:10px;font-size:13px;">
+  <span style="color:#7a6000;font-weight:600;white-space:nowrap;">🔑 OpenAI API 키</span>
+  <input type="password" id="apikey-input" placeholder="sk-..." 
+    style="flex:1;max-width:400px;padding:6px 12px;border:1px solid #e0c840;border-radius:6px;font-size:13px;font-family:inherit;outline:none;background:#fff;"
+    oninput="saveApiKey(this.value)">
+  <span id="apikey-status" style="color:#aaa;font-size:12px;white-space:nowrap;"></span>
+  <a href="https://platform.openai.com/api-keys" target="_blank" 
+    style="color:#7a6000;font-size:11px;text-decoration:underline;white-space:nowrap;">키 발급받기 →</a>
+</div>
+
 <div class="tab-bar">
   <button class="tab active" id="tab-request" onclick="switchTab('request')">📋 고객 모집용 (요청 광고)</button>
   <button class="tab" id="tab-gosu" onclick="switchTab('gosu')">🛠️ 전문가 모집용 (고수 광고)</button>
@@ -256,6 +266,33 @@ const state = {
   request: { history: [], totalRows: 0 },
   gosu:    { history: [], totalRows: 0 }
 };
+
+// ── API Key ───────────────────────────────────────────
+function saveApiKey(val) {
+  const trimmed = val.trim();
+  if(trimmed) {
+    sessionStorage.setItem('soomgo_apikey', trimmed);
+    const status = document.getElementById('apikey-status');
+    if(trimmed.startsWith('sk-')) {
+      status.textContent = '✅ 키 입력됨';
+      status.style.color = '#00a86b';
+    } else {
+      status.textContent = '⚠️ 형식 확인 (sk-로 시작)';
+      status.style.color = '#e05a10';
+    }
+  }
+}
+function getApiKey() {
+  return sessionStorage.getItem('soomgo_apikey') || '';
+}
+// Restore key on load
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = getApiKey();
+  if(saved) {
+    document.getElementById('apikey-input').value = saved;
+    saveApiKey(saved);
+  }
+});
 
 function switchTab(tab) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active','green-tab'));
@@ -532,22 +569,30 @@ ${!isRequest?`
 
 [{"appeal":"service","main":"메인카피11자","sub":"서브카피11자","cta":"CTA문구","intent":"기획의도 1-2문장"},...]`;
 
-  const resp=await fetch('https://api.anthropic.com/v1/messages',{
+  const apiKey = getApiKey();
+  if(!apiKey) throw new Error('API 키를 입력해주세요 (상단 노란 바)');
+
+  const resp=await fetch('https://api.openai.com/v1/chat/completions',{
     method:'POST',
-    headers:{'Content-Type':'application/json'},
+    headers:{
+      'Content-Type':'application/json',
+      'Authorization':'Bearer '+apiKey
+    },
     body:JSON.stringify({
-      model:'claude-sonnet-4-20250514',
+      model:'gpt-4o',
       max_tokens:1800,
-      system:systemPrompt,
-      messages:[{role:'user',content:
-        '서비스명: '+service+'\n'+(isRequest?'고객 모집용(요청)':'전문가 모집용(고수)')+' 광고 카피 5개를 생성하세요. 반드시 JSON 배열만 출력하세요.'
-      }]
+      messages:[
+        {role:'system',content:systemPrompt},
+        {role:'user',content:
+          '서비스명: '+service+'\n'+(isRequest?'고객 모집용(요청)':'전문가 모집용(고수)')+' 광고 카피 5개를 생성하세요. 반드시 JSON 배열만 출력하세요.'
+        }
+      ]
     })
   });
 
   if(!resp.ok) throw new Error('API '+resp.status);
   const data=await resp.json();
-  const raw=data.content[0].text;
+  const raw=data.choices[0].message.content;
 
   // Robust JSON extraction: find the first '[' and last ']'
   const start=raw.indexOf('[');
